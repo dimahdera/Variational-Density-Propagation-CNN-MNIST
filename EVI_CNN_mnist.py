@@ -1,4 +1,3 @@
-
 ### Copyright (C) <2019>  <Dimah Dera>
 
 
@@ -49,11 +48,9 @@ def update_progress(progress):
     sys.stdout.write(text)
     sys.stdout.flush()
     
-#def gather_axis(params, indices, axis=0):
-#    return tf.stack(tf.unstack(tf.gather(tf.unstack(params, axis=axis), indices)), axis=axis)
  
 def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides= [1,1,1,1], padding= "VALID")
+    return tf.nn.conv2d(x, W, strides= [1,1,1,1], padding= "VALID")#without padding
 
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize= [1,2,2,1], strides= [1,2,2,1], padding= "SAME")
@@ -61,11 +58,10 @@ def max_pool_2x2(x):
 def Model_with_uncertainty_computation(x, y_label, conv1_weight_M, conv1_weight_sigma, fc1_weight_mu, fc1_bias_mu,fc1_weight_sigma,
             fc1_bias_sigma, new_size, keep_prob, image_size=28, patch_size=5, num_channel=1, num_filters=[32,64],num_labels=10, epsilon_std=1.):   
 
-    # Propagation through the convolutional layer
-    conv1_weight_epsilon = tf.random_normal([patch_size, patch_size,num_channel,num_filters[0]], mean=0.0, stddev=epsilon_std, dtype=tf.float32, seed=None, name=None)   
-    W_conv1= conv1_weight_M + tf.multiply(tf.log(1. + tf.exp(conv1_weight_sigma)), conv1_weight_epsilon)  #
-    
+    ## Propagation through the convolutional layer
+    # Propagate the mean
     mu_z = conv2d(x, conv1_weight_M)# shape=[1, image_size,image_size,num_filters[0]]
+    # Propagate the covariance matrix
     x_train_patches = tf.extract_image_patches(x, ksizes=[1, patch_size, patch_size, 1], strides=[1,1,1,1], rates=[1,1,1,1], padding = "VALID")# shape=[1, image_size, image_size, patch_size*patch_size*num_channel]
     x_train_matrix = tf.reshape(x_train_patches,[1, -1, patch_size*patch_size*num_channel])# shape=[1, image_size*image_size, patch_size*patch_size*num_channel]    
     X_XTranspose = tf.matmul(x_train_matrix, tf.transpose(x_train_matrix, [0, 2, 1]))# shape=[1, image_size*image_size, image_size*image_size ] dimension of vectorized slice in the tensor z
@@ -74,27 +70,28 @@ def Model_with_uncertainty_computation(x, y_label, conv1_weight_M, conv1_weight_
     X_XTranspose = tf.transpose(X_XTranspose, [0, 2, 3, 1])#shape=[1,image_size*image_size, image_size*image_size, num_filter[0]]
     X_XTranspose = tf.squeeze(X_XTranspose) #shape=[image_size*image_size, image_size*image_size, num_filter[0]]
     sigma_z = tf.multiply(tf.log(1. + tf.exp(conv1_weight_sigma)), X_XTranspose)#shape=[image_size*image_size, image_size*image_size, num_filter[0]]        
-    ######################################################   
-    # propagation through the activation function  
-    z = conv2d(x, W_conv1)#shape=[1, image_size,image_size,num_filters[0]]
+    ######################################################
+    ###################################################### 
+    ## propagation through the activation function  
+    # Propagate the mean
     mu_g = tf.nn.relu(mu_z)#shape=[1, image_size,image_size,num_filters[0]]
-    g = tf.nn.relu(z)
-    activation_gradiant = tf.gradients(g, z)[0] # shape =[1, image_size,image_size,num_filters[0]]    
+    # Propagate the covariance matrix
+    activation_gradiant = tf.gradients(mu_g, mu_z)[0] # shape =[1, image_size,image_size,num_filters[0]]    
     gradient_matrix = tf.reshape(activation_gradiant,[1, -1, num_filters[0]])# shape =[1, image_size*image_size, num_filters[0]]    
     gradient_matrix=tf.expand_dims(gradient_matrix, 3)
     grad1 = tf.transpose(gradient_matrix, [0,2,1,3])
     grad2 = tf.transpose(grad1,[0,1,3,2])
     grad_square = tf.matmul(grad1,grad2)
     grad_square = tf.transpose(grad_square,[0,2,3,1])# shape =[1, image_size*image_size, image_size*image_size, num_filters[0]]
-    grad_square = tf.squeeze(grad_square)
-    print(grad_square.get_shape())
+    grad_square = tf.squeeze(grad_square)    
     sigma_g = tf.multiply(sigma_z, grad_square)# shape =[image_size*image_size,image_size*image_size, num_filters[0]]   
     ######################################################
-    image_size = image_size - patch_size + 1
-    # propagation through the max-pooling layer    
-    mu_p = max_pool_2x2(mu_g)  #shape=[1, new_size,new_size,num_filters[0]]
-    p, argmax = tf.nn.max_pool_with_argmax(g, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME') #shape=[1, new_size,new_size,num_filters[0]]
-        
+    ###################################################### 
+    image_size = image_size - patch_size + 1    
+    ## propagation through the max-pooling layer
+    # Propagate the mean
+    mu_p, argmax = tf.nn.max_pool_with_argmax(mu_g, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME') #shape=[1, new_size,new_size,num_filters[0]]
+    # Propagate the covariance matrix    
     argmax1= tf.transpose(argmax, [0, 3, 1, 2])
     argmax2 = tf.reshape(argmax1,[1, num_filters[0], -1])#shape=[1, num_filters[0], new_size*new_size]
     new_sigma_g= tf.transpose(sigma_g, [2, 0, 1]) # shape =[num_filters[0], image_size*image_size, image_size*image_size]
@@ -120,22 +117,17 @@ def Model_with_uncertainty_computation(x, y_label, conv1_weight_M, conv1_weight_
     final = tf.gather(column4,new_ind)
     sigma_p = tf.reshape(final,[num_filters[0],new_size*new_size,new_size*new_size]) #shape=[num_filters[0],new_size*new_size, new_size*new_size] 
     ######################################################
-    # # Flatten the feature map after the max-pooling layer
-    b = tf.reshape(p, [-1, new_size*new_size*num_filters[0]]) #shape=[1, new_size*new_size*num_filters[0]]
+    ###################################################### 
+    ## Flatten the feature map after the max-pooling layer
+    
     mu_b = tf.reshape(mu_p, [-1, new_size*new_size*num_filters[0]]) #shape=[1, new_size*new_size*num_filters[0]]        
     diag_elements = tf.matrix_diag_part(sigma_p) #shape=[num_filters[0], new_size*new_size]     
     diag_sigma_b =tf.reshape(diag_elements,[-1]) #shape=[new_size*new_size*num_filters[0]]       
     ######################################################
-    # # propagation through the Fully Connected        
-    fc1_weight_epsilon = tf.random_normal([new_size*new_size*num_filters[0], num_labels], mean=0.0, stddev=epsilon_std, dtype=tf.float32, seed=None, name=None)
-    fc1_bias_epsilon = tf.random_normal([num_labels], mean=0.0, stddev=epsilon_std*1e-2, dtype=tf.float32, seed=None, name=None)
-    
-    W_fc1 = fc1_weight_mu + tf.multiply(tf.log(1. + tf.exp(fc1_weight_sigma)), fc1_weight_epsilon)#
-    b_fc1 = fc1_bias_mu + tf.multiply(tf.log(1. + tf.exp(fc1_bias_sigma)) , fc1_bias_epsilon)   
-    f_fc1 = tf.matmul(b, W_fc1) + b_fc1 #shape=[1, num_labels]
-    mu_f_fc1 = tf.matmul(mu_b, fc1_weight_mu) + fc1_bias_mu #shape=[1, num_labels]
-    
-    ######################################################  
+    ## propagation through the Fully Connected
+    # Propagate the mean
+    mu_f_fc1 = tf.matmul(mu_b, fc1_weight_mu) + fc1_bias_mu #shape=[1, num_labels]    
+    # Propagate the covariance matrix
     fc1_weight_mu1 = tf.reshape(fc1_weight_mu, [num_filters[0],new_size*new_size,num_labels]) #shape=[num_filters[0],new_size*new_size,num_labels]
     fc1_weight_mu1T = tf.transpose(fc1_weight_mu1,[0,2,1]) #shape=[num_filters[0],num_labels,new_size*new_size]
     
@@ -151,25 +143,18 @@ def Model_with_uncertainty_computation(x, y_label, conv1_weight_M, conv1_weight_
     tr_sigma_h_sigma_b = tf.diag(tr_sigma_h_sigma_b) #shape=[num_labels,num_labels]
     mu_bT_sigma_h_mu_b = tf.diag(mu_bT_sigma_h_mu_b) #shape=[num_labels,num_labels]    
     sigma_f = tr_sigma_h_sigma_b + muhT_sigmab_mu + mu_bT_sigma_h_mu_b #shape=[num_labels,num_labels]     
-    ######################################################  
-    y_out = tf.nn.softmax(f_fc1 ) #shape=[1, num_labels]    
-    mu_y = tf.nn.softmax(mu_f_fc1) #shape=[1, num_labels] 
+    ######################################################
+    ######################################################
+    ## propagation through the soft-max layer
+    # Propagate the mean
+    mu_y = tf.nn.softmax(mu_f_fc1) #shape=[1, num_labels]
+    # Propagate the covariance matrix
     # compute the gradient of softmax manually  
     grad_f1 = tf.matmul(tf.transpose(mu_y), mu_y)  
     diag_f = tf.diag(tf.squeeze(mu_y))
     grad_soft = diag_f - grad_f1 #shape=[num_labels,num_labels]
-    sigma_y = tf.matmul(grad_soft,   tf.matmul(sigma_f, tf.transpose(grad_soft)))#shape=[num_labels,num_labels]   
-
-    ###################################################### 
-    # gradient for partial linearization. We only care about target visualization class. 
-    y_label_c1 = tf.reduce_sum(tf.multiply(mu_f_fc1 ,  y_label), axis=1)
-    y_label_c2 = tf.reduce_sum(tf.multiply(f_fc1 ,  y_label), axis=1)    
-    # Get last convolutional layer gradient for generating gradCAM visualization
-    target_conv_layer1 = mu_p
-    target_conv_layer2 = p      
-    target_conv_layer_grad1 = tf.gradients(y_label_c1, target_conv_layer1)[0] 
-    target_conv_layer_grad2 = tf.gradients(y_label_c2, target_conv_layer2)[0]     
-    return y_out ,mu_y, f_fc1, mu_f_fc1, sigma_y, sigma_f, target_conv_layer1, target_conv_layer_grad1, target_conv_layer2, target_conv_layer_grad2 
+    sigma_y = tf.matmul(grad_soft,   tf.matmul(sigma_f, tf.transpose(grad_soft)))#shape=[num_labels,num_labels] 
+    return mu_y, mu_f_fc1, sigma_y, sigma_f
    
 
 # the log-likelihood of the objective function
@@ -212,9 +197,9 @@ def plot_images(images, sigma_std, epoch, cls_true, cls_pred=None, noise=0.0):
     plt.savefig('./EVI_with_sigma_{}/epochs_{}/EVI_CNN_on_MNIST_Tested_images.png'.format(sigma_std, epoch))    
     plt.close(fig)       
     
-def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64],num_labels=10, batch_size = 50, noise_limit = 0.1,
-         noise_l2_weight = 0.01, adversary_target_cls=3, init_sigma_std=-2.2 , init_mu=0.1, epochs =10,
-        Adversarial_noise=False, Random_noise=False, gaussain_noise_var=0.1, Training = True, repeat_initial=False, continue_train = False):     
+def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64],num_labels=10, batch_size = 50, noise_limit = 0.3,
+         noise_l2_weight = 0.01, adversary_target_cls=3, Adv_lr = 0.8e-4, lr = 1e-4, init_sigma_std=-2.2 , init_mu=0.1, epochs =5,
+        Adversarial_noise=True, Random_noise=False, gaussain_noise_var=0.1, Training = True, repeat_initial=False, continue_train = False):     
     init_std = 0.1
     
     x = tf.placeholder(tf.float32, shape = (1, image_size,image_size,num_channel), name='x')
@@ -258,12 +243,12 @@ def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64
         x_noisy_image = x + x_noise        
         x_noisy_image = tf.clip_by_value(x_noisy_image, 0.0, 1.0) 
         print('Call the model ....')
-        network_out, prediction, class_score1, class_score2, output_sigma, sigma_f, maxmu, maxmu_g, maxh, maxh_g = Model_with_uncertainty_computation(x_noisy_image, y, conv1_weight_M, conv1_weight_sigma,   fc1_weight_mu, fc1_bias_mu,fc1_weight_sigma, fc1_bias_sigma, new_size,keep_prob)
+        prediction, class_score1, output_sigma, sigma_f = Model_with_uncertainty_computation(x_noisy_image, y, conv1_weight_M, conv1_weight_sigma,   fc1_weight_mu, fc1_bias_mu,fc1_weight_sigma, fc1_bias_sigma, new_size,keep_prob)
         adversary_variables = tf.get_collection(ADVERSARY_VARIABLES)  
         l2_loss_noise = noise_l2_weight * tf.nn.l2_loss(x_noise)  
     else:
         print('Call the model ....')
-        network_out, prediction, class_score1, class_score2, output_sigma, sigma_f, maxmu, maxmu_g, maxh, maxh_g = Model_with_uncertainty_computation(x, y, conv1_weight_M, conv1_weight_sigma,   fc1_weight_mu, fc1_bias_mu,fc1_weight_sigma, fc1_bias_sigma, new_size, keep_prob)
+        prediction, class_score1, output_sigma, sigma_f= Model_with_uncertainty_computation(x, y, conv1_weight_M, conv1_weight_sigma,   fc1_weight_mu, fc1_bias_mu,fc1_weight_sigma, fc1_bias_sigma, new_size, keep_prob)
     ######################################################     
     # KL-divergence regularization term
     f_s = tf.log(1. + tf.exp(fc1_weight_sigma))
@@ -280,19 +265,14 @@ def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64
     print('Compute Cost Function ....')  
     log_likelihood = nll_gaussian(prediction, output_sigma1, y)   
     loss = log_likelihood +  tau *(kl_loss_conv1 + kl_loss_fc1 )
-    print('Compute Optm ....')
-    global_step = tf.Variable(0, trainable=False)
-    starter_learning_rate = 1e-3
-    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                           1000, 0.96, staircase=True)
-    optm = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss, global_step=global_step)   
-    #optm = tf.train.AdamOptimizer(learning_rate = 1e-4).minimize(loss) 
+    print('Compute Optm ....')       
+    optm = tf.train.AdamOptimizer(learning_rate = lr).minimize(loss) 
     print('Compute Accuracy ....')
     corr = tf.equal(y_pred_cls , tf.argmax(y,1))
     accuracy = tf.reduce_mean(tf.cast(corr,tf.float32))
     if Adversarial_noise:          
         loss_adversary = log_likelihood + l2_loss_noise
-        optimizer_adversary = tf.train.AdamOptimizer(learning_rate= 1e-5).minimize(loss_adversary, var_list=adversary_variables)#AdamOptimizer
+        optimizer_adversary = tf.train.AdamOptimizer(learning_rate= Adv_lr).minimize(loss_adversary, var_list=adversary_variables)#AdamOptimizer
         
     print('Initialize Variables ....')   
     saver = tf.train.Saver()  # initialize saver for saving weight and bias values
@@ -423,8 +403,7 @@ def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64
         
     fig  = plt.figure(figsize=(15,7))
     plt.plot(test_acc, 'r', label='Test acc')
-    plt.ylim(0, 1.2)
-   # plt.plot(test_err, 'b', label='Test error')
+    plt.ylim(0, 1.2)   
     plt.title("Bayesian CNN on MNIST Data Test Acc")
     plt.xlabel("Test Image Number")
     plt.ylabel("Accuracy")
@@ -446,24 +425,19 @@ def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32,64
     cls_pred = np.zeros_like(cls_true) 
     uncert = np.zeros([9, num_labels, num_labels]) 
     mean_val = np.zeros([9, num_labels])
-    class_score11 = np.zeros([9, num_labels])
-    class_score22 = np.zeros([9, num_labels])
-    maxmu_out = np.zeros([9, new_size, new_size, num_filters[0]])
-    maxmuout_g = np.zeros([9, new_size, new_size, num_filters[0]])
-    max_out = np.zeros([9, new_size, new_size, num_filters[0]])
-    maxout_g = np.zeros([9, new_size, new_size, num_filters[0]])
+    class_score11 = np.zeros([9, num_labels])    
     sigma_f1 = np.zeros([9, num_labels, num_labels]) 
     for j in range(9):
         if Random_noise:
             img_test[j,:,:,:] = random_noise(img_test[j,:,:,:], mode='gaussian', var = gaussain_noise_var) 
         test_xx_ = np.expand_dims(img_test[j,:,:,:],axis=0)
         test_yy_ = np.expand_dims(test_label[j,:], axis=0)   
-        cls_pred[j],mean_val[j,:], class_score11[j,:], class_score22[j,:], uncert[j,:,:], sigma_f1[j,:,:], maxmu_out[j,:,:,:],maxmuout_g[j,:,:,:], max_out[j,:,:,:],maxout_g[j,:,:,:] = sess.run([y_pred_cls, prediction, class_score1, class_score2, output_sigma, sigma_f, maxmu, maxmu_g, maxh,maxh_g], feed_dict={x: test_xx_, y: test_yy_, keep_prob:1.})
+        cls_pred[j],mean_val[j,:], class_score11[j,:], uncert[j,:,:], sigma_f1[j,:,:] = sess.run([y_pred_cls, prediction, class_score1, output_sigma, sigma_f], feed_dict={x: test_xx_, y: test_yy_, keep_prob:1.})
         
 
     images = img_test
     f2 = open('./EVI_with_sigma_{}/epochs_{}/test_uncert_info.pkl'.format(init_std, epochs), 'wb')    
-    pickle.dump([uncert, mean_val, cls_pred, class_score11, class_score22, sigma_f1, maxmu_out, maxmuout_g, max_out, maxout_g], f2)
+    pickle.dump([uncert, mean_val, cls_pred, class_score11, sigma_f1], f2)
     f2.close()
     
     if Adversarial_noise:
