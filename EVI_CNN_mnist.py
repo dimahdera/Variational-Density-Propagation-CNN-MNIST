@@ -87,13 +87,13 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     mu_z = conv2d(x, conv1_weight_M)# shape=[1, image_size,image_size,num_filters[0]]
     # Propagate the covariance matrix
     x_train_patches = tf.extract_image_patches(x, ksizes=[1, patch_size, patch_size, 1], strides=[1,1,1,1], rates=[1,1,1,1], padding = "VALID")# shape=[1, image_size, image_size, patch_size*patch_size*num_channel]
-    x_train_matrix = tf.reshape(x_train_patches,[1, -1, patch_size*patch_size*num_channel])# shape=[1, image_size*image_size, patch_size*patch_size*num_channel]    
-    X_XTranspose = tf.matmul(x_train_matrix, tf.transpose(x_train_matrix, [0, 2, 1]))# shape=[1, image_size*image_size, image_size*image_size ] dimension of vectorized slice in the tensor z
+    x_train_matrix = tf.reshape(x_train_patches,[1, -1, patch_size*patch_size*num_channel])  # shape=[1, 576, 25]    
+    X_XTranspose = tf.matmul(x_train_matrix, tf.transpose(x_train_matrix, [0, 2, 1]))   # shape=[1, 576, 576 ] dimension of vectorized slice in the tensor z
     X_XTranspose=tf.expand_dims(X_XTranspose, 1)
-    X_XTranspose = tf.tile(X_XTranspose, [1, num_filters[0],1,1])#shape=[1, num_filter[0], image_size*image_size, image_size*image_size]
-    X_XTranspose = tf.transpose(X_XTranspose, [0, 2, 3, 1])#shape=[1,image_size*image_size, image_size*image_size, num_filter[0]]
-    X_XTranspose = tf.squeeze(X_XTranspose) #shape=[image_size*image_size, image_size*image_size, num_filter[0]]
-    sigma_z = tf.multiply(tf.log(1. + tf.exp(conv1_weight_sigma)), X_XTranspose)#shape=[image_size*image_size, image_size*image_size, num_filter[0]]        
+    X_XTranspose = tf.tile(X_XTranspose, [1, num_filters[0],1,1])     #shape=[1, 32, 576, 576]
+    X_XTranspose = tf.transpose(X_XTranspose, [0, 2, 3, 1])       #shape=[1,576, 576, 32]
+    X_XTranspose = tf.squeeze(X_XTranspose)          
+    sigma_z = tf.multiply(tf.log(1. + tf.exp(conv1_weight_sigma)), X_XTranspose)       #shape=[576, 576, 32]        
     ######################################################
     ######################################################   
     ## propagation through the activation function  
