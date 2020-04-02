@@ -100,15 +100,15 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     # Propagate the mean  
     mu_g = tf.nn.relu(mu_z)#shape=[1, image_size,image_size,num_filters[0]]    
     # Propagate the covariance matrix
-    activation_gradiant = tf.gradients(mu_g, mu_z)[0] # shape =[1, image_size,image_size,num_filters[0]]    
-    gradient_matrix = tf.reshape(activation_gradiant,[1, -1, num_filters[0]])# shape =[1, image_size*image_size, num_filters[0]]    
-    gradient_matrix=tf.expand_dims(gradient_matrix, 3)
-    grad1 = tf.transpose(gradient_matrix, [0,2,1,3])
-    grad2 = tf.transpose(grad1,[0,1,3,2])
-    grad_square = tf.matmul(grad1,grad2)
-    grad_square = tf.transpose(grad_square,[0,2,3,1])# shape =[1, image_size*image_size, image_size*image_size, num_filters[0]]
+    activation_gradiant = tf.gradients(mu_g, mu_z)[0] # shape =[1, 24,24,32]    
+    gradient_matrix = tf.reshape(activation_gradiant,[1, -1, num_filters[0]])# shape =[1, 576, 32]    
+    gradient_matrix=tf.expand_dims(gradient_matrix, 3) # shape =[1, 576, 32,1] 
+    grad1 = tf.transpose(gradient_matrix, [0,2,1,3]) # shape =[1, 32, 576,1] 
+    grad2 = tf.transpose(grad1,[0,1,3,2]) # shape =[1, 32, 1,576]
+    grad_square = tf.matmul(grad1,grad2)  # shape =[1, 32,576,576]
+    grad_square = tf.transpose(grad_square,[0,2,3,1])# shape =[1, 576, 576, 32]
     grad_square = tf.squeeze(grad_square)    
-    sigma_g = tf.multiply(sigma_z, grad_square)# shape =[image_size*image_size,image_size*image_size, num_filters[0]]   
+    sigma_g = tf.multiply(sigma_z, grad_square)# shape =[576,576, 32]   
     ######################################################
     ######################################################
     image_size = image_size - patch_size + 1    
