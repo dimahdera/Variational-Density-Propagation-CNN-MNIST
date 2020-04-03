@@ -150,35 +150,35 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     ######################################################
     ## propagation through the Fully Connected 
     # Propagate the mean    
-    mu_f_fc1 = tf.matmul(mu_b, fc1_weight_mu) + fc1_bias_mu #shape=[1, num_labels]    
+    mu_f = tf.matmul(mu_b, fc1_weight_mu) + fc1_bias_mu #shape=[1, num_labels]    
     # Propagate the covariance matrix
-    fc1_weight_mu1 = tf.reshape(fc1_weight_mu, [num_filters[0],new_size*new_size,num_labels]) #shape=[num_filters[0],new_size*new_size,num_labels]
-    fc1_weight_mu1T = tf.transpose(fc1_weight_mu1,[0,2,1]) #shape=[num_filters[0],num_labels,new_size*new_size]
+    fc1_weight_mu1 = tf.reshape(fc1_weight_mu, [num_filters[0],new_size*new_size,num_labels]) #shape=[32],144,10]
+    fc1_weight_mu1T = tf.transpose(fc1_weight_mu1,[0,2,1]) #shape=[32,10,144]
     
-    muhT_sigmab = tf.matmul(fc1_weight_mu1T,sigma_p)#shape=[num_filters[0],num_labels,new_size*new_size]
-    muhT_sigmab_mu = tf.matmul(muhT_sigmab,fc1_weight_mu1)#shape=[num_filters[0],num_labels,num_labels]
-    muhT_sigmab_mu = tf.reduce_sum(muhT_sigmab_mu, 0) #shape=[num_labels,num_labels]
+    muhT_sigmab = tf.matmul(fc1_weight_mu1T,sigma_p)#shape=[32,10,144]
+    muhT_sigmab_mu = tf.matmul(muhT_sigmab,fc1_weight_mu1)#shape=[32,10,10]
+    muhT_sigmab_mu = tf.reduce_sum(muhT_sigmab_mu, 0) #shape=[10,10]
        
     tr_sigma_b = tf.reduce_sum(diag_sigma_b)#shape=[1]
     mu_bT_mu_b = tf.reduce_sum(tf.multiply(mu_b, mu_b),1)  
     mu_bT_mu_b = tf.squeeze(mu_bT_mu_b)#shape=[1]    
-    tr_sigma_h_sigma_b = tf.multiply(tf.log(1. + tf.exp(fc1_weight_sigma)), tr_sigma_b) # shape=[num_labels] 
-    mu_bT_sigma_h_mu_b = tf.multiply(tf.log(1. + tf.exp(fc1_weight_sigma)), mu_bT_mu_b) # shape=[num_labels]     
-    tr_sigma_h_sigma_b = tf.diag(tr_sigma_h_sigma_b) #shape=[num_labels,num_labels]
-    mu_bT_sigma_h_mu_b = tf.diag(mu_bT_sigma_h_mu_b) #shape=[num_labels,num_labels]    
-    sigma_f = tr_sigma_h_sigma_b + muhT_sigmab_mu + mu_bT_sigma_h_mu_b #shape=[num_labels,num_labels]     
+    tr_sigma_h_sigma_b = tf.multiply(tf.log(1. + tf.exp(fc1_weight_sigma)), tr_sigma_b) # shape=[10] 
+    mu_bT_sigma_h_mu_b = tf.multiply(tf.log(1. + tf.exp(fc1_weight_sigma)), mu_bT_mu_b) # shape=[10]     
+    tr_sigma_h_sigma_b = tf.diag(tr_sigma_h_sigma_b) #shape=[10,10]
+    mu_bT_sigma_h_mu_b = tf.diag(mu_bT_sigma_h_mu_b) #shape=[10,10]    
+    sigma_f = tr_sigma_h_sigma_b + muhT_sigmab_mu + mu_bT_sigma_h_mu_b #shape=[10,10]     
     ######################################################  
     ######################################################       
     ## propagation through the soft-max layer    
     # Propagate the mean
-    mu_y = tf.nn.softmax(mu_f_fc1) #shape=[1, num_labels] 
+    mu_y = tf.nn.softmax(mu_f) #shape=[1, num_labels] 
     # Propagate the covariance matrix
     # compute the gradient of softmax manually  
     grad_f1 = tf.matmul(tf.transpose(mu_y), mu_y)  
     diag_f = tf.diag(tf.squeeze(mu_y))
     grad_soft = diag_f - grad_f1 #shape=[num_labels,num_labels]
     sigma_y = tf.matmul(grad_soft,   tf.matmul(sigma_f, tf.transpose(grad_soft)))#shape=[num_labels,num_labels] 
-    return mu_y, mu_f_fc1, sigma_y, sigma_f
+    return mu_y, mu_f, sigma_y, sigma_f
    
 
 # the log-likelihood of the objective function
