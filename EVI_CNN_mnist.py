@@ -84,7 +84,7 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
 
     ## Propagation through the convolutional layer
     # Propagate the mean    
-    mu_z = conv2d(x, conv1_weight_M)# shape=[1, image_size,image_size,num_filters[0]]
+    mu_z = conv2d(x, conv1_weight_M) # shape=[1, 24,24,32]
     # Propagate the covariance matrix
     x_train_patches = tf.extract_image_patches(x, ksizes=[1, patch_size, patch_size, 1], strides=[1,1,1,1], rates=[1,1,1,1], padding = "VALID")# shape=[1, image_size, image_size, patch_size*patch_size*num_channel]
     x_train_matrix = tf.reshape(x_train_patches,[1, -1, patch_size*patch_size*num_channel])  # shape=[1, 576, 25]    
