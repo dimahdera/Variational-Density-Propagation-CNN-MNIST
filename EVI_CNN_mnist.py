@@ -338,7 +338,7 @@ def main_function(image_size=28, num_channel=1, patch_size=5, num_filters=[32],n
     log_likelihood = nll_gaussian(prediction, output_sigma1, y)   
     loss = log_likelihood +  tau *(kl_loss_conv1 + kl_loss_fc1 )
     print('Compute Optm ....')
-    global_step = tf.Variable(0, trainable=False)
+    #global_step = tf.Variable(0, trainable=False)
     #starter_learning_rate = 1e-3
    # learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
     #                                       1000, 0.96, staircase=True)
