@@ -114,7 +114,7 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     image_size = image_size - patch_size + 1    
     ## propagation through the max-pooling layer 
     # Propagate the mean      
-    mu_p, argmax = tf.nn.max_pool_with_argmax(mu_g, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME') #shape=[1, new_size,new_size,num_filters[0]]
+    mu_p, argmax = tf.nn.max_pool_with_argmax(mu_g, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME') #shape=[1, 12,12,32]
     # Propagate the covariance matrix    
     argmax1= tf.transpose(argmax, [0, 3, 1, 2])
     argmax2 = tf.reshape(argmax1,[1, num_filters[0], -1])#shape=[1, num_filters[0], new_size*new_size]
@@ -139,7 +139,7 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     column3 = tf.transpose(column2, [0, 2, 1]) 
     column4 = tf.reshape(column3, [num_filters[0]*image_size*image_size, -1])
     final = tf.gather(column4,new_ind)
-    sigma_p = tf.reshape(final,[num_filters[0],new_size*new_size,new_size*new_size]) #shape=[num_filters[0],new_size*new_size, new_size*new_size] 
+    sigma_p = tf.reshape(final,[num_filters[0],new_size*new_size,new_size*new_size]) #shape=[32,144, 144] 
     ######################################################
     ######################################################
     # # Flatten the feature map after the max-pooling layer
