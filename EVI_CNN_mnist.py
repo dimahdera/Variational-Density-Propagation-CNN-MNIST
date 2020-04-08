@@ -152,7 +152,7 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     # Propagate the mean    
     mu_f = tf.matmul(mu_b, fc1_weight_mu) + fc1_bias_mu #shape=[1, num_labels]    
     # Propagate the covariance matrix
-    fc1_weight_mu1 = tf.reshape(fc1_weight_mu, [num_filters[0],new_size*new_size,num_labels]) #shape=[32],144,10]
+    fc1_weight_mu1 = tf.reshape(fc1_weight_mu, [num_filters[0],new_size*new_size,num_labels]) #shape=[32,144,10]
     fc1_weight_mu1T = tf.transpose(fc1_weight_mu1,[0,2,1]) #shape=[32,10,144]
     
     muhT_sigmab = tf.matmul(fc1_weight_mu1T,sigma_p)#shape=[32,10,144]
