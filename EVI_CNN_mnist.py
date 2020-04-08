@@ -74,7 +74,7 @@ def max_pool_2x2(x):
 #       num_labels: the number of classes in the dataset. It is 10 for the MNIST dataset
 # Outputs: 
 #       mu_y: The output mean vector (predictive mean).
-#       mu_f_fc1: The logit or class score.
+#       mu_f: The logit or class score.
 #       sigma_y: The output covariance matrix (predictive covariance matrix).
 #       sigma_f: The covariance matrix before the soft-max layer.
 
