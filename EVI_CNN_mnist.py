@@ -145,8 +145,8 @@ def Model_with_uncertainty_computation(x, conv1_weight_M, conv1_weight_sigma, fc
     # # Flatten the feature map after the max-pooling layer
     
     mu_b = tf.reshape(mu_p, [-1, new_size*new_size*num_filters[0]]) #shape=[1, 12*12*32] = [1, 4608]       
-    diag_elements = tf.matrix_diag_part(sigma_p) #shape=[num_filters[0], new_size*new_size]     
-    diag_sigma_b =tf.reshape(diag_elements,[-1]) #shape=[new_size*new_size*num_filters[0]]       
+    diag_elements = tf.matrix_diag_part(sigma_p) #shape=[32, 144]     
+    diag_sigma_b =tf.reshape(diag_elements,[-1]) #shape=[4608]       
     ######################################################
     ## propagation through the Fully Connected 
     # Propagate the mean    
