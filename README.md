@@ -1,4 +1,4 @@
-# Extended-Variational-Inference-CNN
+# Variational-Density-Propagation-CNN
 Model conﬁdence or uncertainty is critical in autonomous systems as they directly tie to the safety and trustworthiness of the system. 
 The quantiﬁcation of uncertainty in the output decisions of deep neural networks (DNNs) is a challenging problem. 
 The Bayesian framework enables the estimation of the predictive uncertainty by introducing probability distributions over the (unknown) network weights; 
