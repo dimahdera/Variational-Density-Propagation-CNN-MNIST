@@ -8,3 +8,11 @@ Our proposed eVI framework propagates the ﬁrst two moments (mean and covarianc
 We employ ﬁrst-order Taylor series linearization to approximate the mean and covariances passing through the non-linear activations. 
 The uncertainty in the output decision is given by the propagated covariance of the predictive distribution. 
 Furthermore, we show, through extensive simulations on the MNIST and datasets, that the CNN becomes more robust to Gaussian noise and adversarial attacks.
+
+The code is scaled to TF 2 version in 
+https://github.com/dimahdera/Variational-Density-Propagation-CNN-MNIST-Tensorflow-2.x.git
+https://github.com/dimahdera/PremiUm-CNN-CIFAR10-Tensorflow-2.x.git
+
+# Citation
+
+Dimah Dera, Nidhal C. Bouaynaya, Ghulam Rasool, Roman Shterenberg and Hassan M Fathallah Shaykh, “PremiUm-CNN: Propagating Uncertainty towards Robust Convolutional Neural Networks,” IEEE Transactions on Signal Processing, 2021 (under review).
