@@ -10,6 +10,7 @@ The uncertainty in the output decision is given by the propagated covariance of 
 Furthermore, we show, through extensive simulations on the MNIST and datasets, that the CNN becomes more robust to Gaussian noise and adversarial attacks.
 
 The code is scaled to TF 2 version in 
+
 https://github.com/dimahdera/Variational-Density-Propagation-CNN-MNIST-Tensorflow-2.x.git
 https://github.com/dimahdera/PremiUm-CNN-CIFAR10-Tensorflow-2.x.git
 
