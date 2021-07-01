@@ -17,4 +17,4 @@ https://github.com/dimahdera/PremiUm-CNN-CIFAR10-Tensorflow-2.x.git
 
 # Citation
 
-Dimah Dera, Nidhal C. Bouaynaya, Ghulam Rasool, Roman Shterenberg and Hassan M Fathallah Shaykh, “PremiUm-CNN: Propagating Uncertainty towards Robust Convolutional Neural Networks,” IEEE Transactions on Signal Processing, 2021 (under review).
+Dimah Dera, Nidhal C. Bouaynaya, Ghulam Rasool, Roman Shterenberg and Hassan M Fathallah Shaykh, “PremiUm-CNN: Propagating Uncertainty towards Robust Convolutional Neural Networks,” IEEE Transactions on Signal Processing, June 2021.
